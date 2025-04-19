@@ -120,7 +120,7 @@ def testar_algoritmo(nome, func, start_state, *args):
     print(f"  Tempo: {fim - inicio:.4f}s")
     print(f"  Memória: {memoria / 1024:.2f} KB\n")
 
-# Execuções de teste
+
 if __name__ == "__main__":
     instancias = {
         "Fácil": (1, 2, 3, 4, 0, 6, 7, 5, 8),
