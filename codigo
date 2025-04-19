@@ -1,0 +1,137 @@
+# Quebra-cabeça dos 8 números
+
+import heapq
+from collections import deque
+import time
+import tracemalloc
+
+# Estado final desejado
+GOAL_STATE = (1, 2, 3,
+              4, 5, 6,
+              7, 8, 0)
+
+MOVES = {
+    0: [1, 3],
+    1: [0, 2, 4],
+    2: [1, 5],
+    3: [0, 4, 6],
+    4: [1, 3, 5, 7],
+    5: [2, 4, 8],
+    6: [3, 7],
+    7: [4, 6, 8],
+    8: [5, 7]
+}
+
+def move(state, pos0, pos1):
+    lst = list(state)
+    lst[pos0], lst[pos1] = lst[pos1], lst[pos0]
+    return tuple(lst)
+
+def get_neighbors(state):
+    pos0 = state.index(0)
+    return [move(state, pos0, m) for m in MOVES[pos0]]
+
+def manhattan(state):
+    distance = 0
+    for i, tile in enumerate(state):
+        if tile == 0:
+            continue
+        goal_pos = GOAL_STATE.index(tile)
+        distance += abs(i // 3 - goal_pos // 3) + abs(i % 3 - goal_pos % 3)
+    return distance
+
+def misplaced_tiles(state):
+    return sum(1 for i in range(9) if state[i] != 0 and state[i] != GOAL_STATE[i])
+
+# Busca em Largura (BFS)
+def bfs(start):
+    visited = set()
+    queue = deque([(start, [])])
+    while queue:
+        state, path = queue.popleft()
+        if state == GOAL_STATE:
+            return path
+        visited.add(state)
+        for neighbor in get_neighbors(state):
+            if neighbor not in visited:
+                queue.append((neighbor, path + [neighbor]))
+    return None
+
+# Busca em Profundidade (DFS)
+def dfs(start, limit=50):
+    visited = set()
+    stack = [(start, [])]
+    while stack:
+        state, path = stack.pop()
+        if len(path) > limit:
+            continue
+        if state == GOAL_STATE:
+            return path
+        visited.add(state)
+        for neighbor in get_neighbors(state):
+            if neighbor not in visited:
+                stack.append((neighbor, path + [neighbor]))
+    return None
+
+# Busca Gulosa
+def greedy(start, heuristic):
+    visited = set()
+    heap = [(heuristic(start), start, [])]
+    while heap:
+        _, state, path = heapq.heappop(heap)
+        if state == GOAL_STATE:
+            return path
+        visited.add(state)
+        for neighbor in get_neighbors(state):
+            if neighbor not in visited:
+                heapq.heappush(heap, (heuristic(neighbor), neighbor, path + [neighbor]))
+    return None
+
+# Algoritmo A*
+def astar(start, heuristic):
+    visited = set()
+    heap = [(heuristic(start), 0, start, [])]  # f = h + g
+    while heap:
+        f, g, state, path = heapq.heappop(heap)
+        if state == GOAL_STATE:
+            return path
+        if state in visited:
+            continue
+        visited.add(state)
+        for neighbor in get_neighbors(state):
+            if neighbor not in visited:
+                cost = g + 1
+                heapq.heappush(heap, (cost + heuristic(neighbor), cost, neighbor, path + [neighbor]))
+    return None
+
+# Função para testar algoritmos e medir desempenho
+def testar_algoritmo(nome, func, start_state, *args):
+    tracemalloc.start()
+    inicio = time.time()
+    path = func(start_state, *args)
+    fim = time.time()
+    memoria, _ = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    print(f"{nome}")
+    if path:
+        print(f"  Movimentos: {len(path)}")
+    else:
+        print("  Solução não encontrada")
+    print(f"  Tempo: {fim - inicio:.4f}s")
+    print(f"  Memória: {memoria / 1024:.2f} KB\n")
+
+# Execuções de teste
+if __name__ == "__main__":
+    instancias = {
+        "Fácil": (1, 2, 3, 4, 0, 6, 7, 5, 8),
+        "Média": (1, 2, 3, 0, 4, 6, 7, 5, 8),
+        "Difícil": (7, 2, 4, 5, 0, 6, 8, 3, 1)
+    }
+
+    for nome, estado in instancias.items():
+        print(f"### Instância: {nome} ###")
+        testar_algoritmo("BFS", bfs, estado)
+        testar_algoritmo("DFS", dfs, estado)
+        testar_algoritmo("Gulosa (Manhattan)", greedy, estado, manhattan)
+        testar_algoritmo("A* (Manhattan)", astar, estado, manhattan)
+        print("==============================\n")
